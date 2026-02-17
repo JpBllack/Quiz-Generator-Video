@@ -1,0 +1,27 @@
+[
+  {
+    "pergunta": "Qual é o músculo principal trabalhado no Supino?",
+    "opcoes": ["Bíceps", "Peitoral", "Dorsal"],
+    "correta": 1
+  },
+  {
+    "pergunta": "O que significa a sigla 'MVP' em projetos?",
+    "opcoes": ["Minimum Viable Product", "Most Valuable Player", "Muito Valor Agregado"],
+    "correta": 0
+  },
+  {
+    "pergunta": "Qual linguagem é usada para estilizar páginas Web?",
+    "opcoes": ["HTML", "Python", "CSS"],
+    "correta": 2
+  },
+  {
+    "pergunta": "Quantos bits tem um Byte?",
+    "opcoes": ["4 bits", "8 bits", "16 bits"],
+    "correta": 1
+  },
+  {
+    "pergunta": "Qual a capital do Tocantins?",
+    "opcoes": ["Palmas", "Araguaína", "Gurupi"],
+    "correta": 0
+  }
+]
