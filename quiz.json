@@ -1,27 +1,27 @@
 [
   {
-    "pergunta": "Qual é o músculo principal trabalhado no Supino?",
-    "opcoes": ["Bíceps", "Peitoral", "Dorsal"],
-    "correta": 1
-  },
-  {
-    "pergunta": "O que significa a sigla 'MVP' em projetos?",
-    "opcoes": ["Minimum Viable Product", "Most Valuable Player", "Muito Valor Agregado"],
-    "correta": 0
-  },
-  {
-    "pergunta": "Qual linguagem é usada para estilizar páginas Web?",
-    "opcoes": ["HTML", "Python", "CSS"],
+    "pergunta": "Qual instrumento musical é famoso por ter teclas pretas e brancas?",
+    "opcoes": ["Acordeão", "Bateria", "Piano"],
     "correta": 2
   },
   {
-    "pergunta": "Quantos bits tem um Byte?",
-    "opcoes": ["4 bits", "8 bits", "16 bits"],
+    "pergunta": "Qual característica torna um violão 'eletroacústico' diferente do violão comum?",
+    "opcoes": ["Ele não usa cordas", "Pode ser plugado em uma caixa de som", "Ele toca as notas sozinho"],
     "correta": 1
   },
   {
-    "pergunta": "Qual a capital do Tocantins?",
-    "opcoes": ["Palmas", "Araguaína", "Gurupi"],
+    "pergunta": "Qual ritmo musical brasileiro ficou famoso no mundo todo com nomes como Tom Jobim?",
+    "opcoes": ["Bossa Nova", "Sertanejo Universitário", "Axé"],
     "correta": 0
+  },
+  {
+    "pergunta": "Na produção musical, o que significa a sigla 'BPM'?",
+    "opcoes": ["Batidas Por Minuto", "Banda Para Meninos", "Baixo, Piano e Microfone"],
+    "correta": 0
+  },
+  {
+    "pergunta": "Quem é mundialmente conhecido como o 'Rei do Pop'?",
+    "opcoes": ["Elvis Presley", "Freddie Mercury", "Michael Jackson"],
+    "correta": 2
   }
 ]
