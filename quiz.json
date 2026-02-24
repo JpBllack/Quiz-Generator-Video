@@ -1,27 +1,47 @@
 [
-  {
-    "pergunta": "Qual instrumento musical é famoso por ter teclas pretas e brancas?",
-    "opcoes": ["Acordeão", "Bateria", "Piano"],
-    "correta": 2
-  },
-  {
-    "pergunta": "Qual característica torna um violão 'eletroacústico' diferente do violão comum?",
-    "opcoes": ["Ele não usa cordas", "Pode ser plugado em uma caixa de som", "Ele toca as notas sozinho"],
-    "correta": 1
-  },
-  {
-    "pergunta": "Qual ritmo musical brasileiro ficou famoso no mundo todo com nomes como Tom Jobim?",
-    "opcoes": ["Bossa Nova", "Sertanejo Universitário", "Axé"],
-    "correta": 0
-  },
-  {
-    "pergunta": "Na produção musical, o que significa a sigla 'BPM'?",
-    "opcoes": ["Batidas Por Minuto", "Banda Para Meninos", "Baixo, Piano e Microfone"],
-    "correta": 0
-  },
-  {
-    "pergunta": "Quem é mundialmente conhecido como o 'Rei do Pop'?",
-    "opcoes": ["Elvis Presley", "Freddie Mercury", "Michael Jackson"],
-    "correta": 2
-  }
+    {
+        "pergunta": "O que é um violão 'eletroacústico', como o modelo Giannini GF-2 OEQ, por exemplo?",
+        "opcoes": [
+            "Um instrumento que não precisa de cordas",
+            "Um violão que tem captação de som e pode ser ligado num amplificador",
+            "Um violão feito inteiramente de plástico"
+        ],
+        "correta": 1
+    },
+    {
+        "pergunta": "Qual é a função do acessório chamado 'Pestana' (ou Capotraste) no violão ou guitarra?",
+        "opcoes": [
+            "Limpar as cordas de aço",
+            "Apenas enfeitar o braço do instrumento",
+            "Alterar o tom das cordas pressionando-as todas juntas"
+        ],
+        "correta": 2
+    },
+    {
+        "pergunta": "Na teoria musical, o que significa uma 'Oitava'?",
+        "opcoes": [
+            "O intervalo entre duas notas musicais com o mesmo nome",
+            "Uma banda formada por oito pessoas",
+            "Uma guitarra de oito cordas"
+        ],
+        "correta": 0
+    },
+    {
+        "pergunta": "Como se chama o pequeno objeto de plástico muito usado por guitarristas para tocar as cordas?",
+        "opcoes": [
+            "Baqueta",
+            "Palheta",
+            "Arco"
+        ],
+        "correta": 1
+    },
+    {
+        "pergunta": "Qual destas opções representa uma das notas musicais básicas?",
+        "opcoes": [
+            "Sustenido",
+            "Maior",
+            "Fá"
+        ],
+        "correta": 2
+    }
 ]
