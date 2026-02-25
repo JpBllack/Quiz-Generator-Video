@@ -14,20 +14,32 @@ COR_BOTAO_BASE = (255, 0, 80)
 COR_BOTAO_CERTO = (0, 200, 100)    
 COR_AMARELO = (255, 255, 0)
 
-# Caminhos
+# Caminhos das Fontes
+# arialbd.ttf é boa para texto, mas não tem emoji.
 FONTE_BOLD = "C:/Windows/Fonts/arialbd.ttf"
-IMG_FUNDO = os.path.join("assets", "fundo.jpg")
+# seguiemj.ttf é a fonte do Windows que tem os emojis desenhados
+FONTE_EMOJI = "C:/Windows/Fonts/seguiemj.ttf"
+
+# Ajuste se necessário ou remova se não usar imagem estática
+IMG_FUNDO = os.path.join("assets", "fundo.jpg") 
 
 # Áudios
-SOM_TIC_TAC = r"C:\Users\Micro\OneDrive\Documentos\projetos\quiz_ai\assets\ticking.mp3"
-SOM_CORRETO = r"C:\Users\Micro\OneDrive\Documentos\projetos\quiz_ai\assets\correct.mp3"
+SOM_TIC_TAC = os.path.join("assets", "ticking.mp3")
+SOM_CORRETO = os.path.join("assets", "correct.mp3")
 SOM_FUNDO = os.path.join("assets", "background_music.mp3") 
 SOM_ENCERRAMENTO = os.path.join("assets", "audio", "encerramento.mp3") 
 
 # --- FUNÇÕES GRÁFICAS (PILLOW) ---
-def carregar_fonte(tamanho):
-    try: return ImageFont.truetype(FONTE_BOLD, tamanho)
-    except: return ImageFont.load_default()
+def carregar_fonte(tamanho, usa_emoji=False):
+    caminho_fonte = FONTE_EMOJI if usa_emoji else FONTE_BOLD
+    try: 
+        return ImageFont.truetype(caminho_fonte, tamanho)
+    except: 
+        # Tenta fallback se a fonte específica não existir
+        try:
+            return ImageFont.truetype("arial.ttf", tamanho)
+        except:
+            return ImageFont.load_default()
 
 def criar_card_pergunta_integrado(texto_pergunta):
     w_card, h_card = 900, 600
@@ -118,7 +130,9 @@ def criar_clip_encerramento(clip_fundo_base):
     x_card, y_card = (LARGURA - w_card) // 2, (ALTURA - h_card) // 2
     draw.rounded_rectangle((x_card, y_card, x_card+w_card, y_card+h_card), radius=60, fill=COR_CARD)
     
-    font_grande, font_media = carregar_fonte(90), carregar_fonte(60)
+    # Carregamos a fonte normal para títulos e a fonte de EMOJI para as frases de baixo
+    font_grande = carregar_fonte(90)
+    font_media_emoji = carregar_fonte(60, usa_emoji=True) # <--- AQUI A MÁGICA
     
     def txt_centro(texto, y, font, cor):
         x = (LARGURA - (draw.textbbox((0, 0), texto, font=font)[2] - draw.textbbox((0, 0), texto, font=font)[0])) / 2
@@ -126,8 +140,10 @@ def criar_clip_encerramento(clip_fundo_base):
 
     txt_centro("QUANTAS VOCÊ", y_card + 100, font_grande, 'black')
     txt_centro("ACERTOU?", y_card + 200, font_grande, COR_BOTAO_BASE)
-    txt_centro("Deixe nos comentários! 👇", y_card + 400, font_media, 'black')
-    txt_centro("❤️ Curta e Siga para mais", y_card + 520, font_media, (100, 100, 100))
+    
+    # Usamos a fonte de emoji aqui
+    txt_centro("Deixe nos comentários! 👇", y_card + 400, font_media_emoji, 'black')
+    txt_centro("❤️ Curta e Siga para mais", y_card + 520, font_media_emoji, (100, 100, 100))
     
     clip_textos = ImageClip(np.array(img)).with_duration(duracao_final)
     clip_final_visual = CompositeVideoClip([fundo, clip_textos]).with_duration(duracao_final)
@@ -184,11 +200,8 @@ def gerar_video_final(quiz_data, nome_arquivo="quiz_pronto.mp4", video_fundo_pat
     if os.path.exists(video_fundo_path):
         try:
             bg = VideoFileClip(video_fundo_path).without_audio()
-            
-            # --- O PULO DO GATO PRA RESOLVER O CONGELAMENTO ---
-            # Repete o vídeo original 50 vezes, garantindo loop infinito pra qualquer duração!
+            # Loop infinito (repete 50x)
             bg = concatenate_videoclips([bg] * 50)
-            
             clip_bg = bg.resized(height=ALTURA).cropped(x1=bg.resized(height=ALTURA).w/2 - LARGURA/2, width=LARGURA, height=ALTURA)
         except Exception as e: 
             print(f"⚠️ Erro ao carregar fundo: {e}")
