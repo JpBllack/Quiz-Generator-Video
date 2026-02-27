@@ -1,9 +1,3 @@
-Fala, João! Com todas essas atualizações parrudas que a gente fez hoje (Motor infinito da Microsoft, Renderização Turbo e a Interface Aurora Glass em Lote), a documentação antiga ficou totalmente defasada mesmo.
-
-Preparei o seu `README.md` no padrão ouro do GitHub. Ele já reflete que o projeto agora é 100% gratuito (sem ElevenLabs), processa em lote e usa multi-threading para voar na renderização. Também deixei os exemplos de temas alinhados com os que você configurou (Cristianismo, Musculação e Música).
-
-É só copiar o bloco inteiro abaixo e colar no seu arquivo **`README.md`** lá no repositório:
-
 ---
 
 # 🎬 Quiz Mania - Fábrica Automática de Vídeos
