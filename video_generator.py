@@ -132,7 +132,7 @@ def criar_clip_encerramento(clip_fundo_base):
     
     # Carregamos a fonte normal para títulos e a fonte de EMOJI para as frases de baixo
     font_grande = carregar_fonte(90)
-    font_media_emoji = carregar_fonte(60, usa_emoji=True) # <--- AQUI A MÁGICA
+    font_media_emoji = carregar_fonte(60, usa_emoji=True)
     
     def txt_centro(texto, y, font, cor):
         x = (LARGURA - (draw.textbbox((0, 0), texto, font=font)[2] - draw.textbbox((0, 0), texto, font=font)[0])) / 2
@@ -250,7 +250,20 @@ def gerar_video_final(quiz_data, nome_arquivo="quiz_pronto.mp4", video_fundo_pat
     
     caminho = os.path.join(pasta_destino, nome_arquivo)
     
-    final.write_videofile(caminho, fps=24, codec='libx264', audio_codec='aac', preset='medium') 
+    # ======================================================
+    # 🚀 OTIMIZAÇÃO DE RENDERIZAÇÃO ATIVADA (MULTI-THREADING)
+    # ======================================================
+    nucleos = os.cpu_count() or 4
+    
+    final.write_videofile(
+        caminho, 
+        fps=24, 
+        codec='libx264', 
+        audio_codec='aac', 
+        preset='ultrafast', 
+        threads=nucleos,
+        logger=None
+    ) 
     print(f"✅ VÍDEO PRONTO: {caminho}")
 
 if __name__ == "__main__":

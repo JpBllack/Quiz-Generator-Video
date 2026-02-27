@@ -2,14 +2,16 @@ import os
 import glob
 import json
 import hashlib
-import requests
-from dotenv import load_dotenv
+import asyncio
+import edge_tts
 
-# Carrega as chaves
-load_dotenv()
+# Voz padrão da Microsoft (Brasileira, Masculina). 
+VOZ_PADRAO = "pt-BR-AntonioNeural" 
 
-ELEVEN_API_KEY = os.getenv("ELEVEN_API_KEY")
-VOICE_ID = "pNInz6obpgDQGcFmaJgB"  # ID da voz "Adam"
+async def gerar_audio_async(texto, caminho_completo):
+    # rate="+10%" deixa a voz mais dinâmica para reter atenção
+    communicate = edge_tts.Communicate(texto, VOZ_PADRAO, rate="+10%")
+    await communicate.save(caminho_completo)
 
 def gerar_audio(texto, nome_arquivo):
     caminho_pasta = os.path.join("assets", "audio")
@@ -20,52 +22,24 @@ def gerar_audio(texto, nome_arquivo):
         print(f"♻️ Áudio já em cache: {nome_arquivo}")
         return caminho_completo
 
-    if not ELEVEN_API_KEY:
-        print("❌ Erro: Chave ELEVEN_API_KEY não encontrada no .env")
-        return None
-
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
-
-    headers = {
-        "Accept": "audio/mpeg",
-        "Content-Type": "application/json",
-        "xi-api-key": ELEVEN_API_KEY
-    }
-
-    data = {
-        "text": texto,
-        "model_id": "eleven_multilingual_v2",
-        "voice_settings": {
-            "stability": 0.5,
-            "similarity_boost": 0.75
-        }
-    }
-
-    print(f"🎤 Baixando NOVO áudio da ElevenLabs: '{texto[:30]}...'")
+    print(f"🎤 Baixando NOVO áudio (Edge TTS): '{texto[:30]}...'")
     
     try:
-        response = requests.post(url, json=data, headers=headers)
-        
-        if response.status_code == 200:
-            with open(caminho_completo, "wb") as f:
-                f.write(response.content)
-            print(f"💾 Salvo em: {caminho_completo}")
-            return caminho_completo
-        else:
-            print(f"❌ Erro na ElevenLabs ({response.status_code}): {response.text}")
-            return None
-            
+        asyncio.run(gerar_audio_async(texto, caminho_completo))
+        print(f"💾 Salvo em: {caminho_completo}")
+        return caminho_completo
     except Exception as e:
-        print(f"❌ Erro de conexão: {e}")
+        print(f"❌ Erro de conexão com TTS: {e}")
         return None
 
 def processar_vozes_do_quiz(quiz_data):
-    print("\n--- 🔊 Iniciando Geração de Voz ---")
+    print("\n--- 🔊 Iniciando Geração de Voz (Microsoft Edge) ---")
     
     caminho_pasta = os.path.join("assets", "audio")
     os.makedirs(caminho_pasta, exist_ok=True)
     arquivo_hash = os.path.join(caminho_pasta, "quiz_hash.txt")
 
+    # Verifica se o roteiro mudou para apagar os áudios antigos
     conteudo_json = json.dumps(quiz_data, sort_keys=True, ensure_ascii=False)
     hash_atual = hashlib.md5(conteudo_json.encode('utf-8')).hexdigest()
 
@@ -75,22 +49,22 @@ def processar_vozes_do_quiz(quiz_data):
             hash_salvo = f.read().strip()
 
     if hash_atual != hash_salvo:
-        print("🚨 NOVO ROTEIRO DETECTADO! Limpando áudios antigos das perguntas...")
+        print("🚨 NOVO ROTEIRO DETECTADO! Limpando áudios antigos...")
         arquivos_antigos = glob.glob(os.path.join(caminho_pasta, "pergunta_*.mp3"))
         for arq in arquivos_antigos:
             try:
                 os.remove(arq)
             except Exception as e:
-                print(f"⚠️ Não consegui apagar {arq}: {e}")
+                pass
                 
         with open(arquivo_hash, "w") as f:
             f.write(hash_atual)
     else:
         print("✅ O roteiro é o mesmo. Validando cache existente...")
 
-    # Gera vozes das perguntas
+    # Gera vozes APENAS das perguntas (como era na versão original)
     for i, item in enumerate(quiz_data):
-        texto_narracao = f"Pergunta {i+1}: {item['pergunta']}"
+        texto_narracao = f"{item['pergunta']}"
         nome_arquivo = f"pergunta_{i+1}.mp3"
         
         caminho = gerar_audio(texto_narracao, nome_arquivo)
@@ -100,7 +74,7 @@ def processar_vozes_do_quiz(quiz_data):
         else:
             print(f"⚠️ Pulei o áudio da pergunta {i+1} por erro.")
 
-    # --- NOVO: GERA O ÁUDIO DO ENCERRAMENTO ---
+    # --- GERA O ÁUDIO DO ENCERRAMENTO ---
     print("\n🎤 Verificando áudio de encerramento...")
     texto_encerramento = "Quantas você acertou? Deixe nos comentários! Curta e siga para mais."
     gerar_audio(texto_encerramento, "encerramento.mp3")
