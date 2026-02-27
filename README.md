@@ -1,5 +1,3 @@
----
-
 # 🎬 Quiz Mania - Fábrica Automática de Vídeos
 
 ## 📖 Visão Geral
