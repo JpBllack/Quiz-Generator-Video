@@ -254,7 +254,7 @@ def gerar_video_final(quiz_data, nome_arquivo="quiz_pronto.mp4", video_fundo_pat
     # 🚀 OTIMIZAÇÃO DE RENDERIZAÇÃO ATIVADA (MULTI-THREADING)
     # ======================================================
     nucleos = os.cpu_count() or 4
-    
+        
     final.write_videofile(
         caminho, 
         fps=24, 
@@ -262,7 +262,7 @@ def gerar_video_final(quiz_data, nome_arquivo="quiz_pronto.mp4", video_fundo_pat
         audio_codec='aac', 
         preset='ultrafast', 
         threads=nucleos,
-        logger=None
+        logger='bar'
     ) 
     print(f"✅ VÍDEO PRONTO: {caminho}")
 

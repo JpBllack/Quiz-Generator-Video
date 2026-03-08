@@ -3,6 +3,7 @@ import os
 import json
 import time
 import glob
+from uploader import fazer_upload_youtube
 from voice_generator import processar_vozes_do_quiz
 from video_generator import gerar_video_final
 
@@ -95,21 +96,31 @@ opcoes_temas = list(dicionario_temas.keys())
 # Adicionada a 4ª aba: Gerenciar Temas
 tab1, tab2, tab3, tab4 = st.tabs(["Vídeo 01", "Vídeo 02", "Vídeo 03", "⚙️ Gerenciar Temas"])
 
+
 # --- ABAS DE PRODUÇÃO ---
 with tab1:
     col1, col2 = st.columns([3, 1])
-    with col1: roteiro_1 = st.text_area("Roteiro JSON", height=120, key="json1", placeholder='Cole o JSON aqui...')
-    with col2: st.write(""); st.write(""); tema_1 = st.selectbox("Tema", opcoes_temas, key="tema1")
+    with col1: 
+        titulo_1 = st.text_input("Título do Vídeo (YouTube)", placeholder="Ex: Você sabe tudo sobre isso? 🤔", key="tit1")
+        roteiro_1 = st.text_area("Roteiro JSON", height=120, key="json1", placeholder='Cole o JSON aqui...')
+    with col2: 
+        st.write(""); st.write(""); tema_1 = st.selectbox("Tema", opcoes_temas, key="tema1")
 
 with tab2:
     col1, col2 = st.columns([3, 1])
-    with col1: roteiro_2 = st.text_area("Roteiro JSON", height=120, key="json2", placeholder='Cole o JSON aqui...')
-    with col2: st.write(""); st.write(""); tema_2 = st.selectbox("Tema", opcoes_temas, key="tema2")
+    with col1: 
+        titulo_2 = st.text_input("Título do Vídeo (YouTube)", placeholder="Ex: Duvido você acertar a última!", key="tit2")
+        roteiro_2 = st.text_area("Roteiro JSON", height=120, key="json2", placeholder='Cole o JSON aqui...')
+    with col2: 
+        st.write(""); st.write(""); tema_2 = st.selectbox("Tema", opcoes_temas, key="tema2")
 
 with tab3:
     col1, col2 = st.columns([3, 1])
-    with col1: roteiro_3 = st.text_area("Roteiro JSON", height=120, key="json3", placeholder='Cole o JSON aqui...')
-    with col2: st.write(""); st.write(""); tema_3 = st.selectbox("Tema", opcoes_temas, key="tema3")
+    with col1: 
+        titulo_3 = st.text_input("Título do Vídeo (YouTube)", placeholder="Ex: Teste seus conhecimentos 🧠", key="tit3")
+        roteiro_3 = st.text_area("Roteiro JSON", height=120, key="json3", placeholder='Cole o JSON aqui...')
+    with col2: 
+        st.write(""); st.write(""); tema_3 = st.selectbox("Tema", opcoes_temas, key="tema3")
 
 # --- ABA DE GERENCIAMENTO DE TEMAS ---
 with tab4:
@@ -151,16 +162,24 @@ with tab4:
 
 st.markdown("---")
 
+# Opção de publicação automática
+publicar_auto = st.checkbox("🚀 Publicar automaticamente no YouTube após renderizar?")
+
 # ==========================================
 # 🚀 LÓGICA DE EXECUÇÃO
 # ==========================================
 if st.button("INICIAR PRODUÇÃO", type="primary"):
     
     fila = []
-    inputs = [(roteiro_1, tema_1, "Vídeo 01"), (roteiro_2, tema_2, "Vídeo 02"), (roteiro_3, tema_3, "Vídeo 03")]
+    # Agora a lista de inputs puxa o título digitado também!
+    inputs = [
+        (roteiro_1, tema_1, titulo_1, "Vídeo 01"), 
+        (roteiro_2, tema_2, titulo_2, "Vídeo 02"), 
+        (roteiro_3, tema_3, titulo_3, "Vídeo 03")
+    ]
     
-    for j, t, n in inputs:
-        if j.strip(): fila.append((j, t, n))
+    for j, t, tit, n in inputs:
+        if j.strip(): fila.append((j, t, tit, n))
             
     if not fila:
         st.warning("⚠️ Preencha pelo menos um roteiro.")
@@ -169,7 +188,7 @@ if st.button("INICIAR PRODUÇÃO", type="primary"):
     prog_bar = st.progress(0, text="Iniciando motores...")
     step = 1.0 / len(fila)
     
-    for i, (json_txt, tema, nome) in enumerate(fila):
+    for i, (json_txt, tema, titulo_digitado, nome) in enumerate(fila):
         try:
             base = i * step
             prog_bar.progress(base, text=f"⏳ {nome}: Lendo dados...")
@@ -194,6 +213,24 @@ if st.button("INICIAR PRODUÇÃO", type="primary"):
             prog_bar.progress(base + (step*0.6), text=f"🎬 {nome}: Renderizando...")
             gerar_video_final(quiz_audio, fname, path_bg)
             
+            # --- INTEGRAÇÃO COM YOUTUBE ---
+            if publicar_auto:
+                prog_bar.progress(base + (step*0.8), text=f"🚀 {nome}: A enviar para o YouTube...")
+                
+                # Regra do Título: Usa o que foi digitado. Se estiver vazio, usa o padrão.
+                titulo_video = titulo_digitado.strip() if titulo_digitado.strip() else f"Quiz de {tema.title()} - Consegue acertar?"
+                
+                # Garante que a hashtag #shorts está no título (requisito do algoritmo)
+                if "#shorts" not in titulo_video.lower():
+                    titulo_video += " #shorts"
+                
+                descricao = "Deixe nos comentários quantas respostas acertou! 👇\n\nInscreva-se para mais conteúdo diário!"
+                tags_video = ["quiz", "conhecimento", "curiosidades", "shorts", tema.lower()]
+                
+                fazer_upload_youtube(final_path, titulo_video, descricao, tags_video)
+                st.toast(f"{nome} publicado no YouTube como: {titulo_video}", icon="🚀")
+            # -----------------------------------
+            
             st.toast(f"{nome} Pronto!", icon="✅")
             with st.expander(f"▶️ Resultado: {nome}", expanded=True):
                 st.video(final_path)
@@ -203,3 +240,4 @@ if st.button("INICIAR PRODUÇÃO", type="primary"):
 
     prog_bar.progress(100, text="✅ Processo Finalizado!")
     st.balloons()
+    
