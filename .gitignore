@@ -1,8 +1,9 @@
-# Segurança
+# Segurança Máxima
 client_secrets.json
 token.pickle
+cookies.txt
 
-# Ignorar vídeos e zips pesados
+# Ignorar vídeos e arquivos temporários
 assets/videos_prontos/
 *.mp4
 *.zip

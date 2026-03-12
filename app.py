@@ -4,6 +4,7 @@ import json
 import time
 import glob
 from uploader import fazer_upload_youtube
+#from uploader_tiktok import fazer_upload_tiktok
 from voice_generator import processar_vozes_do_quiz
 from video_generator import gerar_video_final
 
@@ -96,29 +97,25 @@ opcoes_temas = list(dicionario_temas.keys())
 # Adicionada a 4ª aba: Gerenciar Temas
 tab1, tab2, tab3, tab4 = st.tabs(["Vídeo 01", "Vídeo 02", "Vídeo 03", "⚙️ Gerenciar Temas"])
 
-
-# --- ABAS DE PRODUÇÃO ---
+# --- ABAS DE PRODUÇÃO (AGORA APENAS COM O JSON MASTER) ---
 with tab1:
     col1, col2 = st.columns([3, 1])
     with col1: 
-        titulo_1 = st.text_input("Título do Vídeo (YouTube)", placeholder="Ex: Você sabe tudo sobre isso? 🤔", key="tit1")
-        roteiro_1 = st.text_area("Roteiro JSON", height=120, key="json1", placeholder='Cole o JSON aqui...')
+        roteiro_1 = st.text_area("JSON Completo (Título, Descrição e Perguntas)", height=250, key="json1", placeholder='Cole o JSON Mestre aqui...')
     with col2: 
         st.write(""); st.write(""); tema_1 = st.selectbox("Tema", opcoes_temas, key="tema1")
 
 with tab2:
     col1, col2 = st.columns([3, 1])
     with col1: 
-        titulo_2 = st.text_input("Título do Vídeo (YouTube)", placeholder="Ex: Duvido você acertar a última!", key="tit2")
-        roteiro_2 = st.text_area("Roteiro JSON", height=120, key="json2", placeholder='Cole o JSON aqui...')
+        roteiro_2 = st.text_area("JSON Completo (Título, Descrição e Perguntas)", height=250, key="json2", placeholder='Cole o JSON Mestre aqui...')
     with col2: 
         st.write(""); st.write(""); tema_2 = st.selectbox("Tema", opcoes_temas, key="tema2")
 
 with tab3:
     col1, col2 = st.columns([3, 1])
     with col1: 
-        titulo_3 = st.text_input("Título do Vídeo (YouTube)", placeholder="Ex: Teste seus conhecimentos 🧠", key="tit3")
-        roteiro_3 = st.text_area("Roteiro JSON", height=120, key="json3", placeholder='Cole o JSON aqui...')
+        roteiro_3 = st.text_area("JSON Completo (Título, Descrição e Perguntas)", height=250, key="json3", placeholder='Cole o JSON Mestre aqui...')
     with col2: 
         st.write(""); st.write(""); tema_3 = st.selectbox("Tema", opcoes_temas, key="tema3")
 
@@ -133,7 +130,6 @@ with tab4:
         
     if st.button("💾 Salvar Novo Tema", key="btn_salvar_tema"):
         if novo_video_upload and nome_novo_tema:
-            # Formata o nome para o padrão correto do sistema
             nome_formatado = nome_novo_tema.strip().lower().replace(" ", "_")
             nome_arquivo_final = f"background_{nome_formatado}.mp4"
             caminho_salvar = os.path.join(PASTA_ASSETS, nome_arquivo_final)
@@ -143,7 +139,7 @@ with tab4:
                 
             st.success(f"Tema '{nome_novo_tema}' adicionado com sucesso!")
             time.sleep(1)
-            st.rerun() # Atualiza a página para o tema aparecer nas outras abas
+            st.rerun() 
         else:
             st.warning("Preencha o nome do tema e selecione um vídeo.")
 
@@ -158,12 +154,16 @@ with tab4:
                 os.remove(caminho_remover)
                 st.success(f"Tema '{tema_para_remover}' excluído!")
                 time.sleep(1)
-                st.rerun() # Atualiza a página removendo o tema da lista
+                st.rerun() 
 
 st.markdown("---")
 
-# Opção de publicação automática
-publicar_auto = st.checkbox("🚀 Publicar automaticamente no YouTube após renderizar?")
+# Opções de publicação automática em colunas
+col_opt1, col_opt2 = st.columns(2)
+with col_opt1: 
+    publicar_auto = st.checkbox("🚀 Publicar no YouTube")
+with col_opt2: 
+    publicar_tiktok = st.checkbox("🎵 Publicar no TikTok")
 
 # ==========================================
 # 🚀 LÓGICA DE EXECUÇÃO
@@ -171,15 +171,15 @@ publicar_auto = st.checkbox("🚀 Publicar automaticamente no YouTube após rend
 if st.button("INICIAR PRODUÇÃO", type="primary"):
     
     fila = []
-    # Agora a lista de inputs puxa o título digitado também!
+    # Lista limpa: Apenas Roteiro e Tema
     inputs = [
-        (roteiro_1, tema_1, titulo_1, "Vídeo 01"), 
-        (roteiro_2, tema_2, titulo_2, "Vídeo 02"), 
-        (roteiro_3, tema_3, titulo_3, "Vídeo 03")
+        (roteiro_1, tema_1, "Vídeo 01"), 
+        (roteiro_2, tema_2, "Vídeo 02"), 
+        (roteiro_3, tema_3, "Vídeo 03")
     ]
     
-    for j, t, tit, n in inputs:
-        if j.strip(): fila.append((j, t, tit, n))
+    for j, t, n in inputs:
+        if j.strip(): fila.append((j, t, n))
             
     if not fila:
         st.warning("⚠️ Preencha pelo menos um roteiro.")
@@ -188,16 +188,31 @@ if st.button("INICIAR PRODUÇÃO", type="primary"):
     prog_bar = st.progress(0, text="Iniciando motores...")
     step = 1.0 / len(fila)
     
-    for i, (json_txt, tema, titulo_digitado, nome) in enumerate(fila):
+    for i, (json_txt, tema, nome) in enumerate(fila):
         try:
             base = i * step
-            prog_bar.progress(base, text=f"⏳ {nome}: Lendo dados...")
+            prog_bar.progress(base, text=f"⏳ {nome}: Lendo e separando os dados do JSON...")
             
             try:
+                # 1. Carrega o JSON mestre
                 data = json.loads(json_txt)
-                with open("quiz.json", "w", encoding="utf-8") as f: json.dump(data, f, ensure_ascii=False)
-            except:
-                st.error(f"Erro JSON no {nome}"); continue
+                
+                # 2. Extrai as peças 
+                if isinstance(data, dict):
+                    titulo_json = data.get("titulo", "")
+                    desc_json = data.get("descricao", "")
+                    perguntas_quiz = data.get("perguntas", [])
+                else:
+                    # Fallback de segurança se você colocar no formato antigo sem querer
+                    titulo_json = ""
+                    desc_json = ""
+                    perguntas_quiz = data
+                
+                # 3. Salva só as perguntas no arquivo para o renderizador de voz
+                with open("quiz.json", "w", encoding="utf-8") as f: 
+                    json.dump(perguntas_quiz, f, ensure_ascii=False)
+            except Exception as e:
+                st.error(f"Erro JSON no {nome}: {e}"); continue
 
             path_bg = dicionario_temas[tema]
             if not path_bg:
@@ -208,28 +223,30 @@ if st.button("INICIAR PRODUÇÃO", type="primary"):
             final_path = os.path.join(PASTA_ASSETS, "videos_prontos", fname)
 
             prog_bar.progress(base + (step*0.3), text=f"🎙️ {nome}: Gerando Voz...")
-            quiz_audio = processar_vozes_do_quiz(data)
+            quiz_audio = processar_vozes_do_quiz(perguntas_quiz)
             
             prog_bar.progress(base + (step*0.6), text=f"🎬 {nome}: Renderizando...")
             gerar_video_final(quiz_audio, fname, path_bg)
             
+            # --- PREPARAÇÃO DOS TEXTOS PARA UPLOAD ---
+            titulo_final = titulo_json.strip() if titulo_json.strip() else f"Quiz de {tema.title()} - Consegue acertar?"
+            if "#shorts" not in titulo_final.lower():
+                titulo_final += " #shorts"
+                
+            desc_final = desc_json.strip() if desc_json.strip() else f"Deixe nos comentários quantas respostas acertou! 👇\n\n#quiz #{tema.lower().replace(' ', '')} #shorts"
+            tags_video = ["quiz", "conhecimento", "curiosidades", "shorts", tema.lower()]
+
             # --- INTEGRAÇÃO COM YOUTUBE ---
             if publicar_auto:
-                prog_bar.progress(base + (step*0.8), text=f"🚀 {nome}: A enviar para o YouTube...")
-                
-                # Regra do Título: Usa o que foi digitado. Se estiver vazio, usa o padrão.
-                titulo_video = titulo_digitado.strip() if titulo_digitado.strip() else f"Quiz de {tema.title()} - Consegue acertar?"
-                
-                # Garante que a hashtag #shorts está no título (requisito do algoritmo)
-                if "#shorts" not in titulo_video.lower():
-                    titulo_video += " #shorts"
-                
-                descricao = "Deixe nos comentários quantas respostas acertou! 👇\n\nInscreva-se para mais conteúdo diário!"
-                tags_video = ["quiz", "conhecimento", "curiosidades", "shorts", tema.lower()]
-                
-                fazer_upload_youtube(final_path, titulo_video, descricao, tags_video)
-                st.toast(f"{nome} publicado no YouTube como: {titulo_video}", icon="🚀")
-            # -----------------------------------
+                prog_bar.progress(base + (step*0.8), text=f"🚀 {nome}: Enviando para o YouTube...")
+                fazer_upload_youtube(final_path, titulo_final, desc_final, tags_video)
+                st.toast(f"{nome} publicado no YouTube como: {titulo_final}", icon="🚀")
+            
+            # --- INTEGRAÇÃO COM TIKTOK ---
+            if publicar_tiktok:
+                prog_bar.progress(base + (step*0.9), text=f"🎵 {nome}: Enviando para o TikTok...")
+                fazer_upload_tiktok(final_path, desc_final)
+                st.toast(f"{nome} publicado no TikTok!", icon="🎵")
             
             st.toast(f"{nome} Pronto!", icon="✅")
             with st.expander(f"▶️ Resultado: {nome}", expanded=True):
@@ -240,4 +257,3 @@ if st.button("INICIAR PRODUÇÃO", type="primary"):
 
     prog_bar.progress(100, text="✅ Processo Finalizado!")
     st.balloons()
-    

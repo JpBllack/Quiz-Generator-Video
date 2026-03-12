@@ -46,7 +46,7 @@ def fazer_upload_youtube(caminho_video, titulo, descricao, tags):
         'status': {
             # ⚠️ IMPORTANTE: Mantemos como 'private' para testar. 
             # Mude para 'public' quando tiver a certeza de que a linha de montagem está perfeita.
-            'privacyStatus': 'private', 
+            'privacyStatus': 'public', 
             'selfDeclaredMadeForKids': False
         }
     }
