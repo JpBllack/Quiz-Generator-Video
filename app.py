@@ -1,15 +1,27 @@
+import sys
+import asyncio
+import nest_asyncio
+
+# Aplica a vacina para permitir múltiplos motores rodando juntos (Edge TTS + Playwright)
+nest_asyncio.apply()
+
+# Corrige o erro do Playwright/TikTok no Windows
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
 import streamlit as st
 import os
 import json
 import time
 import glob
 from uploader import fazer_upload_youtube
-#from uploader_tiktok import fazer_upload_tiktok
-from voice_generator import processar_vozes_do_quiz
+from uploader_tiktok import fazer_upload_tiktok
+from voice_generator import processar_vozes_do_quiz, processar_voz_vendas
 from video_generator import gerar_video_final
+from video_generator_vendas import gerar_video_vendas
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Fábrica Quiz Mania", page_icon="⚡", layout="centered")
+st.set_page_config(page_title="Fábrica Automática 2 em 1", page_icon="⚡", layout="centered")
 
 # ==========================================
 # 🎨 ESTILO "AURORA GLASS" (Dark & Clean)
@@ -70,7 +82,6 @@ def obter_temas_dinamicos():
     arquivos_mp4 = glob.glob(os.path.join(PASTA_ASSETS, "*.mp4"))
     for caminho in arquivos_mp4:
         nome_arquivo = os.path.basename(caminho)
-        # Ignora arquivos que não são de background na hora de listar
         if nome_arquivo.startswith("background_"):
             nome_limpo = nome_arquivo.replace(".mp4", "").replace("background_", "").replace("_", " ").title()
             temas[nome_limpo] = caminho
@@ -88,172 +99,289 @@ def gerar_nome_sequencial(categoria):
 # ==========================================
 # 🏭 INTERFACE PRINCIPAL
 # ==========================================
-st.title("Fábrica Quiz Mania")
-st.markdown("Central de Produção Automatizada")
+st.title("Fábrica Automática 2 em 1 ⚡")
 
 dicionario_temas = obter_temas_dinamicos()
 opcoes_temas = list(dicionario_temas.keys())
 
-# Adicionada a 4ª aba: Gerenciar Temas
-tab1, tab2, tab3, tab4 = st.tabs(["Vídeo 01", "Vídeo 02", "Vídeo 03", "⚙️ Gerenciar Temas"])
-
-# --- ABAS DE PRODUÇÃO (AGORA APENAS COM O JSON MASTER) ---
-with tab1:
-    col1, col2 = st.columns([3, 1])
-    with col1: 
-        roteiro_1 = st.text_area("JSON Completo (Título, Descrição e Perguntas)", height=250, key="json1", placeholder='Cole o JSON Mestre aqui...')
-    with col2: 
-        st.write(""); st.write(""); tema_1 = st.selectbox("Tema", opcoes_temas, key="tema1")
-
-with tab2:
-    col1, col2 = st.columns([3, 1])
-    with col1: 
-        roteiro_2 = st.text_area("JSON Completo (Título, Descrição e Perguntas)", height=250, key="json2", placeholder='Cole o JSON Mestre aqui...')
-    with col2: 
-        st.write(""); st.write(""); tema_2 = st.selectbox("Tema", opcoes_temas, key="tema2")
-
-with tab3:
-    col1, col2 = st.columns([3, 1])
-    with col1: 
-        roteiro_3 = st.text_area("JSON Completo (Título, Descrição e Perguntas)", height=250, key="json3", placeholder='Cole o JSON Mestre aqui...')
-    with col2: 
-        st.write(""); st.write(""); tema_3 = st.selectbox("Tema", opcoes_temas, key="tema3")
-
-# --- ABA DE GERENCIAMENTO DE TEMAS ---
-with tab4:
-    st.subheader("➕ Adicionar Novo Tema")
-    col_t1, col_t2 = st.columns([2, 1])
-    with col_t1:
-        novo_video_upload = st.file_uploader("Upload do Vídeo de Fundo (MP4)", type=["mp4"])
-    with col_t2:
-        nome_novo_tema = st.text_input("Nome do Tema", placeholder="Ex: Curiosidades")
-        
-    if st.button("💾 Salvar Novo Tema", key="btn_salvar_tema"):
-        if novo_video_upload and nome_novo_tema:
-            nome_formatado = nome_novo_tema.strip().lower().replace(" ", "_")
-            nome_arquivo_final = f"background_{nome_formatado}.mp4"
-            caminho_salvar = os.path.join(PASTA_ASSETS, nome_arquivo_final)
-            
-            with open(caminho_salvar, "wb") as f:
-                f.write(novo_video_upload.getbuffer())
-                
-            st.success(f"Tema '{nome_novo_tema}' adicionado com sucesso!")
-            time.sleep(1)
-            st.rerun() 
-        else:
-            st.warning("Preencha o nome do tema e selecione um vídeo.")
-
-    st.divider()
+# --- 1. MENU LATERAL (A CHAVE SELETORA) ---
+with st.sidebar:
+    st.header("⚙️ Painel de Controle")
+    modo_operacao = st.radio(
+        "Selecione a Linha de Produção:",
+        ["Modo Quiz Mania 🧠", "Modo Vendas (Review) 💰"]
+    )
     
-    st.subheader("🗑️ Remover Tema")
-    tema_para_remover = st.selectbox("Selecione o tema para excluir", opcoes_temas, key="remover_tema")
-    if st.button("Excluir Tema Selecionado", key="btn_excluir_tema"):
-        if tema_para_remover and tema_para_remover != "Nenhum vídeo encontrado":
-            caminho_remover = dicionario_temas[tema_para_remover]
-            if os.path.exists(caminho_remover):
-                os.remove(caminho_remover)
-                st.success(f"Tema '{tema_para_remover}' excluído!")
+    st.markdown("---")
+    st.write("🌐 Configurações de Postagem:")
+    publicar_auto = st.checkbox("🚀 Publicar no YouTube", value=True)
+    publicar_tiktok = st.checkbox("🎵 Publicar no TikTok", value=True)
+    
+    st.markdown("---")
+    st.write("🔧 Ferramentas de Manutenção:")
+    if st.button("🧹 Limpar Token YouTube (Corrige Erro)"):
+        apagou = False
+        arquivos_token = ["token.pickle", "token.json", ".oauth-credentials"]
+        for arquivo in arquivos_token:
+            if os.path.exists(arquivo):
+                os.remove(arquivo)
+                apagou = True
+        
+        if apagou:
+            st.success("✅ Tokens antigos apagados! Na próxima postagem o navegador vai abrir para você logar no Google de novo.")
+        else:
+            st.info("Nenhum token encontrado na pasta.")
+
+
+# ==========================================
+# 🧠 MODO 1: FÁBRICA DE QUIZ
+# ==========================================
+if modo_operacao == "Modo Quiz Mania 🧠":
+    st.markdown("### 🧠 Central de Produção: Quiz")
+    
+    tab1, tab2, tab3, tab4 = st.tabs(["Vídeo 01", "Vídeo 02", "Vídeo 03", "⚙️ Gerenciar Temas"])
+
+    with tab1:
+        col1, col2 = st.columns([3, 1])
+        with col1: 
+            roteiro_1 = st.text_area("JSON Completo (Título, Descrição e Perguntas)", height=250, key="json1", placeholder='Cole o JSON Mestre aqui...')
+        with col2: 
+            st.write(""); st.write(""); tema_1 = st.selectbox("Tema", opcoes_temas, key="tema1")
+
+    with tab2:
+        col1, col2 = st.columns([3, 1])
+        with col1: 
+            roteiro_2 = st.text_area("JSON Completo (Título, Descrição e Perguntas)", height=250, key="json2", placeholder='Cole o JSON Mestre aqui...')
+        with col2: 
+            st.write(""); st.write(""); tema_2 = st.selectbox("Tema", opcoes_temas, key="tema2")
+
+    with tab3:
+        col1, col2 = st.columns([3, 1])
+        with col1: 
+            roteiro_3 = st.text_area("JSON Completo (Título, Descrição e Perguntas)", height=250, key="json3", placeholder='Cole o JSON Mestre aqui...')
+        with col2: 
+            st.write(""); st.write(""); tema_3 = st.selectbox("Tema", opcoes_temas, key="tema3")
+
+    with tab4:
+        st.subheader("➕ Adicionar Novo Tema")
+        col_t1, col_t2 = st.columns([2, 1])
+        with col_t1:
+            novo_video_upload = st.file_uploader("Upload do Vídeo de Fundo (MP4)", type=["mp4"])
+        with col_t2:
+            nome_novo_tema = st.text_input("Nome do Tema", placeholder="Ex: Curiosidades")
+            
+        if st.button("💾 Salvar Novo Tema", key="btn_salvar_tema"):
+            if novo_video_upload and nome_novo_tema:
+                nome_formatado = nome_novo_tema.strip().lower().replace(" ", "_")
+                nome_arquivo_final = f"background_{nome_formatado}.mp4"
+                caminho_salvar = os.path.join(PASTA_ASSETS, nome_arquivo_final)
+                
+                with open(caminho_salvar, "wb") as f:
+                    f.write(novo_video_upload.getbuffer())
+                    
+                st.success(f"Tema '{nome_novo_tema}' adicionado com sucesso!")
                 time.sleep(1)
                 st.rerun() 
+            else:
+                st.warning("Preencha o nome do tema e selecione um vídeo.")
 
-st.markdown("---")
+        st.divider()
+        st.subheader("🗑️ Remover Tema")
+        tema_para_remover = st.selectbox("Selecione o tema para excluir", opcoes_temas, key="remover_tema")
+        if st.button("Excluir Tema Selecionado", key="btn_excluir_tema"):
+            if tema_para_remover and tema_para_remover != "Nenhum vídeo encontrado":
+                caminho_remover = dicionario_temas[tema_para_remover]
+                if os.path.exists(caminho_remover):
+                    os.remove(caminho_remover)
+                    st.success(f"Tema '{tema_para_remover}' excluído!")
+                    time.sleep(1)
+                    st.rerun() 
 
-# Opções de publicação automática em colunas
-col_opt1, col_opt2 = st.columns(2)
-with col_opt1: 
-    publicar_auto = st.checkbox("🚀 Publicar no YouTube")
-with col_opt2: 
-    publicar_tiktok = st.checkbox("🎵 Publicar no TikTok")
+    # --- LÓGICA DE EXECUÇÃO DO QUIZ (AUTOMÁTICA COM PAUSA) ---
+    st.markdown("---")
+    st.subheader("⚙️ Controle da Esteira (Quiz)")
 
-# ==========================================
-# 🚀 LÓGICA DE EXECUÇÃO
-# ==========================================
-if st.button("INICIAR PRODUÇÃO", type="primary"):
-    
-    fila = []
-    # Lista limpa: Apenas Roteiro e Tema
-    inputs = [
-        (roteiro_1, tema_1, "Vídeo 01"), 
-        (roteiro_2, tema_2, "Vídeo 02"), 
-        (roteiro_3, tema_3, "Vídeo 03")
-    ]
-    
-    for j, t, n in inputs:
-        if j.strip(): fila.append((j, t, n))
-            
-    if not fila:
-        st.warning("⚠️ Preencha pelo menos um roteiro.")
-        st.stop()
-        
-    prog_bar = st.progress(0, text="Iniciando motores...")
-    step = 1.0 / len(fila)
-    
-    for i, (json_txt, tema, nome) in enumerate(fila):
-        try:
-            base = i * step
-            prog_bar.progress(base, text=f"⏳ {nome}: Lendo e separando os dados do JSON...")
-            
-            try:
-                # 1. Carrega o JSON mestre
-                data = json.loads(json_txt)
+    # Cria a memória de estado (o cérebro da esteira)
+    if "fila_quiz" not in st.session_state:
+        st.session_state.fila_quiz = []
+    if "indice_quiz" not in st.session_state:
+        st.session_state.indice_quiz = 0
+    if "rodando" not in st.session_state:
+        st.session_state.rodando = False
+
+    col_b1, col_b2, col_b3 = st.columns(3)
+
+    with col_b1:
+        # Se não estiver rodando, mostra o botão de iniciar
+        if not st.session_state.rodando:
+            if st.button("▶️ INICIAR PRODUÇÃO", type="primary"):
+                inputs = [(roteiro_1, tema_1, "Vídeo 01"), (roteiro_2, tema_2, "Vídeo 02"), (roteiro_3, tema_3, "Vídeo 03")]
+                st.session_state.fila_quiz = [i for i in inputs if i[0].strip()]
+                st.session_state.indice_quiz = 0
                 
-                # 2. Extrai as peças 
-                if isinstance(data, dict):
-                    titulo_json = data.get("titulo", "")
-                    desc_json = data.get("descricao", "")
-                    perguntas_quiz = data.get("perguntas", [])
+                if not st.session_state.fila_quiz:
+                    st.warning("⚠️ Preencha pelo menos um roteiro antes de iniciar.")
                 else:
-                    # Fallback de segurança se você colocar no formato antigo sem querer
-                    titulo_json = ""
-                    desc_json = ""
-                    perguntas_quiz = data
-                
-                # 3. Salva só as perguntas no arquivo para o renderizador de voz
-                with open("quiz.json", "w", encoding="utf-8") as f: 
-                    json.dump(perguntas_quiz, f, ensure_ascii=False)
-            except Exception as e:
-                st.error(f"Erro JSON no {nome}: {e}"); continue
+                    st.session_state.rodando = True
+                    st.rerun() # Dispara a máquina!
+
+    with col_b2:
+        # Mostra o botão PAUSAR se a máquina estiver ligada
+        if st.session_state.rodando:
+            if st.button("⏸️ PAUSAR MÁQUINA"):
+                st.session_state.rodando = False
+                st.warning("⚠️ Pausando... A máquina vai parar assim que terminar o vídeo atual.")
+                st.rerun()
+        # Mostra o botão RETOMAR se a máquina estiver pausada no meio do caminho
+        elif st.session_state.indice_quiz > 0 and st.session_state.indice_quiz < len(st.session_state.fila_quiz):
+            if st.button("▶️ RETOMAR DE ONDE PAROU"):
+                st.session_state.rodando = True
+                st.rerun()
+
+    with col_b3:
+        if st.button("⏹️ CANCELAR TUDO"):
+            st.session_state.fila_quiz = []
+            st.session_state.indice_quiz = 0
+            st.session_state.rodando = False
+            st.error("🚨 Parada de emergência acionada. Fila zerada.")
+            st.rerun()
+
+    # ==========================================
+    # O MOTOR (Processa 1 por vez e reinicia sozinho)
+    # ==========================================
+    if st.session_state.rodando and st.session_state.indice_quiz < len(st.session_state.fila_quiz):
+        
+        json_txt, tema, nome = st.session_state.fila_quiz[st.session_state.indice_quiz]
+        
+        st.markdown(f"### 🚧 Trabalhando agora no: {nome}")
+        prog_bar = st.progress(0, text="Iniciando motores...")
+        
+        try:
+            prog_bar.progress(10, text=f"⏳ {nome}: Lendo dados do JSON...")
+            data = json.loads(json_txt)
+            if isinstance(data, dict):
+                titulo_json = data.get("titulo", "")
+                desc_json = data.get("descricao", "")
+                perguntas_quiz = data.get("perguntas", [])
+            else:
+                titulo_json = ""
+                desc_json = ""
+                perguntas_quiz = data
+            
+            with open("quiz.json", "w", encoding="utf-8") as f: 
+                json.dump(perguntas_quiz, f, ensure_ascii=False)
 
             path_bg = dicionario_temas[tema]
             if not path_bg:
-                st.error(f"Erro: Fundo não encontrado para {tema}. Adicione na aba de Gerenciar Temas."); continue
-                
-            cat = tema.lower().replace(" ", "_")
-            fname = gerar_nome_sequencial(cat)
-            final_path = os.path.join(PASTA_ASSETS, "videos_prontos", fname)
+                st.error(f"Erro: Fundo não encontrado para {tema}. Adicione na aba de Gerenciar Temas.")
+                st.session_state.rodando = False
+            else:
+                cat = tema.lower().replace(" ", "_")
+                fname = gerar_nome_sequencial(cat)
+                final_path = os.path.join(PASTA_ASSETS, "videos_prontos", fname)
 
-            prog_bar.progress(base + (step*0.3), text=f"🎙️ {nome}: Gerando Voz...")
-            quiz_audio = processar_vozes_do_quiz(perguntas_quiz)
-            
-            prog_bar.progress(base + (step*0.6), text=f"🎬 {nome}: Renderizando...")
-            gerar_video_final(quiz_audio, fname, path_bg)
-            
-            # --- PREPARAÇÃO DOS TEXTOS PARA UPLOAD ---
-            titulo_final = titulo_json.strip() if titulo_json.strip() else f"Quiz de {tema.title()} - Consegue acertar?"
-            if "#shorts" not in titulo_final.lower():
-                titulo_final += " #shorts"
+                prog_bar.progress(30, text=f"🎙️ {nome}: Gerando Voz...")
+                quiz_audio = processar_vozes_do_quiz(perguntas_quiz)
                 
-            desc_final = desc_json.strip() if desc_json.strip() else f"Deixe nos comentários quantas respostas acertou! 👇\n\n#quiz #{tema.lower().replace(' ', '')} #shorts"
-            tags_video = ["quiz", "conhecimento", "curiosidades", "shorts", tema.lower()]
+                prog_bar.progress(60, text=f"🎬 {nome}: Renderizando...")
+                gerar_video_final(quiz_audio, fname, path_bg)
+                
+                titulo_final = titulo_json.strip() if titulo_json.strip() else f"Quiz de {tema.title()} - Consegue acertar?"
+                if "#shorts" not in titulo_final.lower():
+                    titulo_final += " #shorts"
+                    
+                desc_final = desc_json.strip() if desc_json.strip() else f"Deixe nos comentários quantas respostas acertou! 👇\n\n#quiz #{tema.lower().replace(' ', '')} #shorts"
+                tags_video = ["quiz", "conhecimento", "curiosidades", "shorts", tema.lower()]
 
-            # --- INTEGRAÇÃO COM YOUTUBE ---
-            if publicar_auto:
-                prog_bar.progress(base + (step*0.8), text=f"🚀 {nome}: Enviando para o YouTube...")
-                fazer_upload_youtube(final_path, titulo_final, desc_final, tags_video)
-                st.toast(f"{nome} publicado no YouTube como: {titulo_final}", icon="🚀")
-            
-            # --- INTEGRAÇÃO COM TIKTOK ---
-            if publicar_tiktok:
-                prog_bar.progress(base + (step*0.9), text=f"🎵 {nome}: Enviando para o TikTok...")
-                fazer_upload_tiktok(final_path, desc_final)
-                st.toast(f"{nome} publicado no TikTok!", icon="🎵")
-            
-            st.toast(f"{nome} Pronto!", icon="✅")
-            with st.expander(f"▶️ Resultado: {nome}", expanded=True):
+                if publicar_auto:
+                    prog_bar.progress(80, text=f"🚀 {nome}: Enviando para o YouTube...")
+                    fazer_upload_youtube(final_path, titulo_final, desc_final, tags_video)
+                
+                if publicar_tiktok:
+                    prog_bar.progress(90, text=f"🎵 {nome}: Enviando para o TikTok...")
+                    fazer_upload_tiktok(final_path, desc_final)
+                
+                prog_bar.progress(100, text=f"✅ {nome} Finalizado!")
                 st.video(final_path)
                 
+                # O PULO DO GATO: Avança o índice e recarrega a página automaticamente!
+                st.session_state.indice_quiz += 1
+                
+                if st.session_state.indice_quiz < len(st.session_state.fila_quiz):
+                    st.toast(f"Indo para o próximo vídeo...")
+                    time.sleep(2) # Pausa de 2 segundos para você respirar
+                    st.rerun() # Dispara o próximo da fila automaticamente!
+                else:
+                    st.session_state.rodando = False
+                    st.success("🔥 Todos os vídeos da fila foram concluídos com sucesso!")
+                    st.balloons()
+                
         except Exception as e:
-            st.error(f"Erro {nome}: {e}")
+            st.error(f"Erro no {nome}: {e}")
+            st.session_state.rodando = False
+            if "invalid_grant" in str(e).lower():
+                st.error("🚨 O token do YouTube expirou! Vá no menu lateral esquerdo e clique no botão 'Limpar Token YouTube'.")
 
-    prog_bar.progress(100, text="✅ Processo Finalizado!")
-    st.balloons()
+
+# ==========================================
+# 💰 MODO 2: FÁBRICA DE VENDAS (REVIEW)
+# ==========================================
+elif modo_operacao == "Modo Vendas (Review) 💰":
+    st.markdown("### 💰 Central de Produção: Máquina de Vendas Rápida")
+    
+    col_v1, col_v2 = st.columns([3, 1])
+    with col_v1:
+        roteiro_vendas = st.text_area("JSON de Vendas (Cenas e Tempos)", height=250, placeholder='Cole o JSON Mestre de Vendas aqui...')
+    with col_v2:
+        st.write(""); st.write("")
+        pasta_broll = st.selectbox("Pasta de B-Roll (Fundo)", ["violao", "creatina", "geral"])
+        
+    st.markdown("---")
+    
+    if st.button("INICIAR PRODUÇÃO DE VENDAS", type="primary"):
+        if not roteiro_vendas.strip():
+            st.warning("⚠️ Cola o JSON do teu vídeo de vendas antes de continuar.")
+            st.stop()
+            
+        prog_bar = st.progress(0, text="A iniciar o motor de vendas...")
+        
+        try:
+            # 1. Lê o JSON
+            prog_bar.progress(10, text="A ler o guião de vendas...")
+            dados_vendas = json.loads(roteiro_vendas)
+            titulo_vendas = dados_vendas.get("titulo_youtube", "Review Incrível! #shorts")
+            desc_vendas = dados_vendas.get("descricao_links", "Vê o link nos comentários!")
+            cenas = dados_vendas.get("cenas", [])
+            
+            # 2. Gera a Voz
+            prog_bar.progress(30, text="🎙️ A gerar a locução de alta conversão...")
+            caminho_audio_vendas = processar_voz_vendas(cenas)
+            
+            # 3. Renderiza o Vídeo
+            prog_bar.progress(60, text="🎬 A renderizar o vídeo com legendas dinâmicas...")
+            nome_video_saida = f"venda_{pasta_broll}_{int(time.time())}.mp4"
+            caminho_video_final = gerar_video_vendas(caminho_audio_vendas, nome_video_saida, pasta_broll, cenas)
+            
+            # 4. Dispara para as Redes
+            tags_vendas = ["review", "vale a pena", "dica", "shorts", pasta_broll]
+            
+            if publicar_auto:
+                prog_bar.progress(80, text="🚀 A enviar para o YouTube Shorts...")
+                fazer_upload_youtube(caminho_video_final, titulo_vendas, desc_vendas, tags_vendas)
+                st.toast("Publicado no YouTube!", icon="🚀")
+                
+            if publicar_tiktok:
+                prog_bar.progress(90, text="🎵 A despachar para o TikTok...")
+                fazer_upload_tiktok(caminho_video_final, desc_vendas)
+                st.toast("Publicado no TikTok!", icon="🎵")
+                
+            prog_bar.progress(100, text="✅ Máquina de Vendas Finalizada!")
+            st.balloons()
+            
+            with st.expander("▶️ Ver o Vídeo de Vendas Pronto", expanded=True):
+                st.video(caminho_video_final)
+                
+        except Exception as e:
+            st.error(f"Ocorreu um erro na produção: {e}")
+            if "invalid_grant" in str(e).lower():
+                st.error("🚨 O token do YouTube expirou! Vá no menu lateral esquerdo e clique no botão 'Limpar Token YouTube'.")

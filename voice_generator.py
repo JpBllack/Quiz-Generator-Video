@@ -80,3 +80,30 @@ def processar_vozes_do_quiz(quiz_data):
     gerar_audio(texto_encerramento, "encerramento.mp3")
 
     return quiz_data
+
+# Adiciona isto no final do teu voice_generator.py
+
+async def gerar_audio_vendas_async(texto_completo, output_path):
+    # Podes manter a voz brasileira que já usavas, como o Antonio ou a Francisca
+    voz = "pt-BR-AntonioNeural" 
+    communicate = edge_tts.Communicate(texto_completo, voz)
+    await communicate.save(output_path)
+
+def processar_voz_vendas(cenas):
+    print("🎙️ A processar a narração contínua para Vendas...")
+    
+    # Junta o texto de todas as cenas numa única string
+    texto_completo = ""
+    for cena in cenas:
+        texto_completo += cena.get("texto", "") + " "
+        
+    pasta_audio = os.path.join("assets", "audio")
+    os.makedirs(pasta_audio, exist_ok=True)
+    caminho_saida = os.path.join(pasta_audio, "vendas_narracao.mp3")
+    
+    # Usamos o event loop para gerar o áudio sem travar a interface
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(gerar_audio_vendas_async(texto_completo.strip(), caminho_saida))
+    
+    print("✅ Áudio de vendas gerado com sucesso!")
+    return caminho_saida
