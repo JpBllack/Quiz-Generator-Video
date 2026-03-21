@@ -19,6 +19,7 @@ from uploader_tiktok import fazer_upload_tiktok
 from voice_generator import processar_vozes_do_quiz, processar_voz_vendas
 from video_generator import gerar_video_final
 from video_generator_vendas import gerar_video_vendas
+from gerador_roteiros import gerar_trinca_quiz_mania # <--- O CÉREBRO NOVO IMPORTADO AQUI
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Fábrica Automática 2 em 1", page_icon="⚡", layout="centered")
@@ -117,6 +118,26 @@ with st.sidebar:
     publicar_auto = st.checkbox("🚀 Publicar no YouTube", value=True)
     publicar_tiktok = st.checkbox("🎵 Publicar no TikTok", value=True)
     
+    # ==========================================
+    # 🔗 CAIXAS DE DESCRIÇÕES FIXAS
+    # ==========================================
+    st.markdown("---")
+    st.write("🔗 Links de Afiliado e Descrições:")
+    with st.expander("Configurar Textos Fixos (Quiz)", expanded=False):
+        desc_crist = st.text_area(
+            "Texto - Cristianismo:", 
+            value="Comente quantas você acertou! E não esquece de seguir para mais curiosidades diárias. 👇\n\nQUER UM VIOLÃO? Cole este ID no buscador do Mercado Livre: 8F1V1F-HXXC\n\n🔗 Ou acesse este link:\nhttps://meli.la/1ym5joa\n\n#quiz #curiosidades #shorts"
+        )
+        desc_musc = st.text_area(
+            "Texto - Musculação:", 
+            value="Comente quantas você acertou! E não esquece de seguir para mais curiosidades diárias. 👇\n\nA creatina mais pura do mercado com desconto! Pegue aqui: https://sua-loja.com/creatina\n\n#academia #creatina #treino #shorts"
+        )
+        desc_musica = st.text_area(
+            "Texto - Música:", 
+            value="Comente quantas você acertou! E não esquece de seguir para mais curiosidades diárias. 👇\n\nQUER UM VIOLÃO? Cole este ID no buscador do Mercado Livre: 8F1V1F-HXXC\n\n🔗 Ou acesse este link:\nhttps://meli.la/1ym5joa\n\n#quiz #musica #violao #shorts"
+        )
+    # ==========================================
+
     st.markdown("---")
     st.write("🔧 Ferramentas de Manutenção:")
     if st.button("🧹 Limpar Token YouTube (Corrige Erro)"):
@@ -139,63 +160,93 @@ with st.sidebar:
 if modo_operacao == "Modo Quiz Mania 🧠":
     st.markdown("### 🧠 Central de Produção: Quiz")
     
-    tab1, tab2, tab3, tab4 = st.tabs(["Vídeo 01", "Vídeo 02", "Vídeo 03", "⚙️ Gerenciar Temas"])
+    # --- ADICIONADO AQUI: A CHAVE DE MODO ---
+    metodo_entrada = st.radio("Como você quer gerar os roteiros hoje?", ["🤖 Modo IA (Gerar Automático)", "✍️ Modo Manual (Colar JSON)"], horizontal=True)
+    st.markdown("---")
 
-    with tab1:
-        col1, col2 = st.columns([3, 1])
-        with col1: 
-            roteiro_1 = st.text_area("JSON Completo (Título, Descrição e Perguntas)", height=250, key="json1", placeholder='Cole o JSON Mestre aqui...')
-        with col2: 
-            st.write(""); st.write(""); tema_1 = st.selectbox("Tema", opcoes_temas, key="tema1")
+    if metodo_entrada == "🤖 Modo IA (Gerar Automático)":
+        st.info("A IA vai escrever a trinca de ouro (Cristianismo, Musculação e Música). Selecione os vídeos de fundo para cada um:")
+        
+        col_bg1, col_bg2, col_bg3 = st.columns(3)
+        with col_bg1: bg_crist = st.selectbox("Fundo 1 (Cristianismo)", opcoes_temas, key="bg_c")
+        with col_bg2: bg_musc = st.selectbox("Fundo 2 (Musculação)", opcoes_temas, key="bg_m")
+        with col_bg3: bg_musica = st.selectbox("Fundo 3 (Música)", opcoes_temas, key="bg_mu")
 
-    with tab2:
-        col1, col2 = st.columns([3, 1])
-        with col1: 
-            roteiro_2 = st.text_area("JSON Completo (Título, Descrição e Perguntas)", height=250, key="json2", placeholder='Cole o JSON Mestre aqui...')
-        with col2: 
-            st.write(""); st.write(""); tema_2 = st.selectbox("Tema", opcoes_temas, key="tema2")
-
-    with tab3:
-        col1, col2 = st.columns([3, 1])
-        with col1: 
-            roteiro_3 = st.text_area("JSON Completo (Título, Descrição e Perguntas)", height=250, key="json3", placeholder='Cole o JSON Mestre aqui...')
-        with col2: 
-            st.write(""); st.write(""); tema_3 = st.selectbox("Tema", opcoes_temas, key="tema3")
-
-    with tab4:
-        st.subheader("➕ Adicionar Novo Tema")
-        col_t1, col_t2 = st.columns([2, 1])
-        with col_t1:
-            novo_video_upload = st.file_uploader("Upload do Vídeo de Fundo (MP4)", type=["mp4"])
-        with col_t2:
-            nome_novo_tema = st.text_input("Nome do Tema", placeholder="Ex: Curiosidades")
-            
-        if st.button("💾 Salvar Novo Tema", key="btn_salvar_tema"):
-            if novo_video_upload and nome_novo_tema:
-                nome_formatado = nome_novo_tema.strip().lower().replace(" ", "_")
-                nome_arquivo_final = f"background_{nome_formatado}.mp4"
-                caminho_salvar = os.path.join(PASTA_ASSETS, nome_arquivo_final)
+        if not st.session_state.get('rodando', False):
+            if st.button("🤖 GERAR ROTEIROS E LIGAR MÁQUINA", type="primary"):
+                with st.spinner("🧠 O Gemini está escrevendo os roteiros e injetando seus links..."):
+                    trinca_json = gerar_trinca_quiz_mania(desc_crist, desc_musc, desc_musica)
                 
-                with open(caminho_salvar, "wb") as f:
-                    f.write(novo_video_upload.getbuffer())
+                if trinca_json and len(trinca_json) == 3:
+                    st.session_state.fila_quiz = [
+                        (json.dumps(trinca_json[0]), bg_crist, "Quiz 01 - Cristianismo"),
+                        (json.dumps(trinca_json[1]), bg_musc, "Quiz 02 - Musculação"),
+                        (json.dumps(trinca_json[2]), bg_musica, "Quiz 03 - Música")
+                    ]
+                    st.session_state.indice_quiz = 0
+                    st.session_state.rodando = True
+                    st.rerun()
+                else:
+                    st.error("❌ Erro ao gerar os roteiros. Verifique sua chave de API.")
                     
-                st.success(f"Tema '{nome_novo_tema}' adicionado com sucesso!")
-                time.sleep(1)
-                st.rerun() 
-            else:
-                st.warning("Preencha o nome do tema e selecione um vídeo.")
+    else: # MODO MANUAL ORIGINAL INTACTO
+        tab1, tab2, tab3, tab4 = st.tabs(["Vídeo 01", "Vídeo 02", "Vídeo 03", "⚙️ Gerenciar Temas"])
 
-        st.divider()
-        st.subheader("🗑️ Remover Tema")
-        tema_para_remover = st.selectbox("Selecione o tema para excluir", opcoes_temas, key="remover_tema")
-        if st.button("Excluir Tema Selecionado", key="btn_excluir_tema"):
-            if tema_para_remover and tema_para_remover != "Nenhum vídeo encontrado":
-                caminho_remover = dicionario_temas[tema_para_remover]
-                if os.path.exists(caminho_remover):
-                    os.remove(caminho_remover)
-                    st.success(f"Tema '{tema_para_remover}' excluído!")
+        with tab1:
+            col1, col2 = st.columns([3, 1])
+            with col1: 
+                roteiro_1 = st.text_area("JSON Completo (Título, Descrição e Perguntas)", height=250, key="json1", placeholder='Cole o JSON Mestre aqui...')
+            with col2: 
+                st.write(""); st.write(""); tema_1 = st.selectbox("Tema", opcoes_temas, key="tema1")
+
+        with tab2:
+            col1, col2 = st.columns([3, 1])
+            with col1: 
+                roteiro_2 = st.text_area("JSON Completo (Título, Descrição e Perguntas)", height=250, key="json2", placeholder='Cole o JSON Mestre aqui...')
+            with col2: 
+                st.write(""); st.write(""); tema_2 = st.selectbox("Tema", opcoes_temas, key="tema2")
+
+        with tab3:
+            col1, col2 = st.columns([3, 1])
+            with col1: 
+                roteiro_3 = st.text_area("JSON Completo (Título, Descrição e Perguntas)", height=250, key="json3", placeholder='Cole o JSON Mestre aqui...')
+            with col2: 
+                st.write(""); st.write(""); tema_3 = st.selectbox("Tema", opcoes_temas, key="tema3")
+
+        with tab4:
+            st.subheader("➕ Adicionar Novo Tema")
+            col_t1, col_t2 = st.columns([2, 1])
+            with col_t1:
+                novo_video_upload = st.file_uploader("Upload do Vídeo de Fundo (MP4)", type=["mp4"])
+            with col_t2:
+                nome_novo_tema = st.text_input("Nome do Tema", placeholder="Ex: Curiosidades")
+                
+            if st.button("💾 Salvar Novo Tema", key="btn_salvar_tema"):
+                if novo_video_upload and nome_novo_tema:
+                    nome_formatado = nome_novo_tema.strip().lower().replace(" ", "_")
+                    nome_arquivo_final = f"background_{nome_formatado}.mp4"
+                    caminho_salvar = os.path.join(PASTA_ASSETS, nome_arquivo_final)
+                    
+                    with open(caminho_salvar, "wb") as f:
+                        f.write(novo_video_upload.getbuffer())
+                        
+                    st.success(f"Tema '{nome_novo_tema}' adicionado com sucesso!")
                     time.sleep(1)
                     st.rerun() 
+                else:
+                    st.warning("Preencha o nome do tema e selecione um vídeo.")
+
+            st.divider()
+            st.subheader("🗑️ Remover Tema")
+            tema_para_remover = st.selectbox("Selecione o tema para excluir", opcoes_temas, key="remover_tema")
+            if st.button("Excluir Tema Selecionado", key="btn_excluir_tema"):
+                if tema_para_remover and tema_para_remover != "Nenhum vídeo encontrado":
+                    caminho_remover = dicionario_temas[tema_para_remover]
+                    if os.path.exists(caminho_remover):
+                        os.remove(caminho_remover)
+                        st.success(f"Tema '{tema_para_remover}' excluído!")
+                        time.sleep(1)
+                        st.rerun() 
 
     # --- LÓGICA DE EXECUÇÃO DO QUIZ (AUTOMÁTICA COM PAUSA) ---
     st.markdown("---")
@@ -212,9 +263,9 @@ if modo_operacao == "Modo Quiz Mania 🧠":
     col_b1, col_b2, col_b3 = st.columns(3)
 
     with col_b1:
-        # Se não estiver rodando, mostra o botão de iniciar
-        if not st.session_state.rodando:
-            if st.button("▶️ INICIAR PRODUÇÃO", type="primary"):
+        # Se não estiver rodando E estiver no modo manual, mostra o botão de iniciar
+        if not st.session_state.rodando and metodo_entrada == "✍️ Modo Manual (Colar JSON)":
+            if st.button("▶️ INICIAR PRODUÇÃO MANUAL", type="primary"):
                 inputs = [(roteiro_1, tema_1, "Vídeo 01"), (roteiro_2, tema_2, "Vídeo 02"), (roteiro_3, tema_3, "Vídeo 03")]
                 st.session_state.fila_quiz = [i for i in inputs if i[0].strip()]
                 st.session_state.indice_quiz = 0
